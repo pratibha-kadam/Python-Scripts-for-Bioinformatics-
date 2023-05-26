@@ -1,0 +1,14 @@
+from Bio import SeqIO
+input_file = open("#add file path")
+my_dict = SeqIO.to_dict(SeqIO.parse(input_file, "fasta"))
+result_file="#add out file path"
+
+#convert ids to list
+with open("#provide path of list of ids.txt") as f:
+    ids = f.read().splitlines()
+
+a= open(result_file, "w") #open file to write
+for seq in my_dict:
+        if seq in ids:
+            print(">" + seq, '\n', my_dict[seq].seq,file=a)
+a.close()
