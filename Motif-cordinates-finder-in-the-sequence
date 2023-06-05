@@ -1,0 +1,10 @@
+import re
+a= "ATAACAATCAATAGTAAAAAGCCTGTTGAGATAACAATCAATAGTAAAAAGCCTGTTGAGATAACAATCAATAGTAAAAAGCCTGTTGAG"
+
+string = "ATAACAATCAAT"
+
+print("The Occurence Count of the motif:",a.count("ATAACAATCAAT"))
+i=0
+for m in re.finditer(string,a):
+    i +=1
+    print("The cordinates of ", i,"position of motif are",m.start()+1,",",m.end()+1)
