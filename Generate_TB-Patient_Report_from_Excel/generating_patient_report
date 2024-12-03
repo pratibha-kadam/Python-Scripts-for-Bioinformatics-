@@ -1,0 +1,95 @@
+import time
+import pandas as pd
+from fpdf import FPDF
+
+
+# Load the Excel file
+file_path = 'TBprofiler-demo.xlsx'
+tb_profiler_data = pd.ExcelFile(file_path)
+
+# Parse and clean the data
+tb_data = tb_profiler_data.parse('Sheet1')
+header_row = 0
+tb_data.columns = tb_data.iloc[header_row]
+# print(tb_data.columns)
+tb_data = tb_data[1:]  # Skip header row
+id_column = "id"
+lineage_column = "Lineage"
+date_column = "Collection Date"
+tb_strain_column = "Drug Resistance status"
+drug_columns = tb_data.columns[5:23]  # Ensure these are the correct drug columns
+
+# Function to categorize drugs
+def categorize_drugs(row, drug_cols):
+    resistant = []
+    susceptible = []
+    for drug in drug_cols:
+        status = row[drug]
+        if isinstance(status, str) and 'R' in status:
+            resistant.append(drug)
+        elif isinstance(status, str) and 'S' in status:
+            susceptible.append(drug)
+    return resistant, susceptible
+
+# Generate reports for each ID
+reports = {}
+for _, row in tb_data.iterrows():
+    id_ = row[id_column]
+    lineage = row[lineage_column]
+    collection_date = pd.to_datetime(row[date_column]).strftime('%d-%m-%Y') if pd.notnull(row[date_column]) else "Unknown"
+    tb_strain = row[tb_strain_column]
+    resistant, susceptible = categorize_drugs(row, drug_columns)
+    reports[id_] = {
+        "Collection_Date": collection_date,
+        "Lineage": lineage,
+        "TB_Strain": tb_strain,
+        "Resistant": resistant,
+        "Susceptible": susceptible,
+    }
+
+# PDF Report Generation Class
+class PDF(FPDF):
+    def header(self):
+        self.image('Final Logo-01.jpg', x=10, y=8, w=50)  # Adjust path as needed
+        self.set_font('Arial', 'B', 14)
+        self.cell(0, 10, 'TB Genome Analysis Report', align='C')
+        self.set_font('Arial', '', 12)
+        self.cell(0,10, f'{time}', align="R", ln =1)
+        self.line(5, 21, 205, 21)
+        
+    def add_report(self, id_, data):
+        self.add_page()
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, f'Patient Id: {id_}', ln=1)
+        self.cell(0, 10, f'Collection Date: {data["Collection_Date"]}', ln=1)
+        self.cell(0, 10, f'Lineage: {data["Lineage"]}', ln=1)
+        self.cell(0, 10, f'TB Strain: {data["TB_Strain"]}', ln=1)
+        self.line(5, 58, 205, 58)
+        self.cell(0, 10, 'Resistance Profile:', ln=1)
+        
+        self.set_font('Arial', 'B', 12)
+        self.set_text_color(0, 200, 0)
+        self.cell(90, 10, 'Susceptible')
+        self.set_text_color(200, 0, 0)
+        self.cell(90, 10, 'Resistance', ln=1)
+        self.set_text_color(0, 0, 0)
+        self.set_font('Arial', '', 12)
+
+        # Print Susceptible and Resistant Drugs
+        max_len = max(len(data["Susceptible"]), len(data["Resistant"]))
+        for i in range(max_len):
+            sus = data["Susceptible"][i] if i < len(data["Susceptible"]) else ''
+            res = data["Resistant"][i] if i < len(data["Resistant"]) else ''
+            self.cell(90, 10, sus, )
+            self.cell(90, 10, res, ln=1)
+
+# Create and save individual reports
+time = time.strftime('%Y-%m-%d')
+
+for id_, report_data in reports.items():
+    pdf = PDF()
+    pdf.add_report(id_, report_data)
+    file_name = f'{id_}_TB_Genomic_Report_{time}.pdf'
+    pdf.output(file_name)
+    print(f'{file_name} saved!')
+
